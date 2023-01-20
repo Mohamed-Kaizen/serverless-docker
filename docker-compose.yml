@@ -1,0 +1,49 @@
+version: '3.9'
+
+services:
+  reverse_proxy:
+    image: traefik:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      # - "./traefik.prod.toml:/etc/traefik/traefik.toml" # For Production use
+      - "./traefik.dev.toml:/etc/traefik/traefik.toml"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      # - "./certificates:/certificates"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`proxy.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.service=api@internal"
+      # - "traefik.http.routers.api.tls=true"
+      # - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+  pyserverless:
+    build: ./pyserverless
+    volumes:
+      - ./pyserverless:/home/serverless
+    expose:
+      - 8000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pyserverless.rule=Host(`py.localhost`)"
+      - "traefik.http.routers.pyserverless.entrypoints=web"
+      # - "traefik.http.routers.pyserverless.tls=true"
+      # - "traefik.http.routers.pyserverless.tls.certresolver=letsencrypt"
+    env_file:
+      - ./.env/pyserverless.env
+  serverless_deno:
+    build: ./serverless_deno
+    volumes:
+      - ./serverless_deno:/home/serverless
+    expose:
+      - 8004
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.serverless_deno.rule=Host(`deno.localhost`)"
+      - "traefik.http.routers.serverless_deno.entrypoints=web"
+      # - "traefik.http.routers.serverless_deno.tls=true"
+      # - "traefik.http.routers.serverless_deno.tls.certresolver=letsencrypt"
+    env_file:
+      - ./.env/serverless_deno.env
